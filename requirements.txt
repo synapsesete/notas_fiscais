@@ -1,0 +1,15 @@
+langchain
+langchain-community
+langchain-experimental
+langchain-openai
+langchain-google-genai
+langchain-ollama
+langchain-pinecone
+langchainhub
+langchain-docling
+python-dotenv
+pytest
+pytest-csv-params
+pynfe
+unstructured
+xmltodict
