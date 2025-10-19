@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/python
+FROM mcr.microsoft.com/devcontainers/python:3.12
 
 RUN sudo apt-get -y update \
                     && apt-get install -y xz-utils \

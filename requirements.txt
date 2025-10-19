@@ -4,12 +4,12 @@ langchain-experimental
 langchain-openai
 langchain-google-genai
 langchain-ollama
-langchain-pinecone
+#langchain-pinecone
 langchainhub
-langchain-docling
 python-dotenv
 pytest
 pytest-csv-params
 pynfe
+pynfe[nfse]
 unstructured
 xmltodict
