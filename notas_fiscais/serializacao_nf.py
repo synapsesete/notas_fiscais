@@ -26,11 +26,12 @@ class SerializacaoXMLNFe400(SerializacaoXML):
 
         nf_dict: OrderedDict[str,Any] = xmltodict.parse(xml_input=xml_content)
 
-        nota_fiscal = _SerializacaoXMLNFe400TranspDecorator(_SerializacaoXMLNFe400ItensDecorator
+        nota_fiscal = _SerializacaoXMLNFe400TotalDecorator(_SerializacaoXMLNFe400TranspDecorator
+                                                           (_SerializacaoXMLNFe400ItensDecorator
                                                             (_SerializacaoXMLNFe400RetiradaDecorator
                                                              (_SerializacaoXMLNFe400DestDecorator
                                                               (_SerializacaoXMLNFe400EmitDecorator
-                                                               (_SerializacaoXMLNFe400Ide(fonte_dados=super()._fonte_dados)))))).importar(nf_dict)
+                                                               (_SerializacaoXMLNFe400Ide(fonte_dados=super()._fonte_dados))))))).importar(nf_dict)
 
         return nota_fiscal
 
@@ -230,6 +231,7 @@ class _SerializacaoXMLNFe400ItensDecorator(SerializacaoXMLNFe400Decorator):
                                             cofins_valor_base_calculo=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['vBC']),
                                             cofins_aliquota_percentual=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['pCOFINS']),
                                             cofins_valor=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['vCOFINS']),
+                                            desconto = Decimal(nf_item['prod']['vDesc'])
 
 
         )
@@ -287,4 +289,15 @@ class _SerializacaoXMLNFe400TranspDecorator(SerializacaoXMLNFe400Decorator):
                                                 numero_lacre = nf_lacres['nLacre']
                     )
         
+        return nota_fiscal
+
+class _SerializacaoXMLNFe400TotalDecorator(SerializacaoXMLNFe400Decorator):
+    """
+    Decorator que adiciona dados totais na Nota Fiscal.
+    """
+    @override
+    def _decorate(self,nf: OrderedDict[str,Any],nota_fiscal: NotaFiscal) -> NotaFiscal:
+        total = nf['nfeProc']['NFe']['infNFe']['total']['ICMSTot']
+        nota_fiscal.valor_total_nota = Decimal(total['vNF'])
+        nota_fiscal.totais_tributos_aproximado = Decimal(total['vTotTrib']) if total.get('vTotTrib') else 0.0
         return nota_fiscal
