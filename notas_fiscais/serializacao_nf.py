@@ -15,7 +15,6 @@ class SerializacaoXMLNFe400(SerializacaoXML):
     """
     Implementação da classe SerializacaoXML que implementa a importação de uma NFe versão 4.00 em formato XML.
     """
-
     @override
     def importar(self, origem: str) -> NotaFiscal:
 
@@ -26,12 +25,13 @@ class SerializacaoXMLNFe400(SerializacaoXML):
 
         nf_dict: OrderedDict[str,Any] = xmltodict.parse(xml_input=xml_content)
 
-        nota_fiscal = _SerializacaoXMLNFe400TotalDecorator(_SerializacaoXMLNFe400TranspDecorator
+        nota_fiscal = _SerializacaoXMLNFe400Cobr ( _SerializacaoXMLNFe400InfAdic(_SerializacaoXMLNFe400TotalDecorator
+                                                    (_SerializacaoXMLNFe400TranspDecorator
                                                            (_SerializacaoXMLNFe400ItensDecorator
                                                             (_SerializacaoXMLNFe400RetiradaDecorator
                                                              (_SerializacaoXMLNFe400DestDecorator
                                                               (_SerializacaoXMLNFe400EmitDecorator
-                                                               (_SerializacaoXMLNFe400Ide(fonte_dados=super()._fonte_dados))))))).importar(nf_dict)
+                                                               (_SerializacaoXMLNFe400Ide(fonte_dados=super()._fonte_dados))))))))).importar(nf_dict)
 
         return nota_fiscal
 
@@ -231,8 +231,11 @@ class _SerializacaoXMLNFe400ItensDecorator(SerializacaoXMLNFe400Decorator):
                                             cofins_valor_base_calculo=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['vBC']),
                                             cofins_aliquota_percentual=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['pCOFINS']),
                                             cofins_valor=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['vCOFINS']),
-                                            desconto = Decimal(nf_item['prod']['vDesc'])
-
+                                            desconto = Decimal(nf_item['prod']['vDesc']),
+                                            fcp_destino_valor = Decimal(nf_item['imposto']['ICMSUFDest']['vFCPUFDest']),
+                                            icms_inter_destino_valor=Decimal(nf_item['imposto']['ICMSUFDest']['vICMSUFDest']),
+                                            totais_icms_inter_remetente=Decimal(nf_item['imposto']['ICMSUFDest']['vICMSUFRemet']),
+                                            fcp_valor=Decimal(nf_item['imposto']['ICMS']['ICMS00']['vFCP'] if nf_item['imposto']['ICMS']['ICMS00'].get('vFCP') else 0.0),
 
         )
         
@@ -300,4 +303,44 @@ class _SerializacaoXMLNFe400TotalDecorator(SerializacaoXMLNFe400Decorator):
         total = nf['nfeProc']['NFe']['infNFe']['total']['ICMSTot']
         nota_fiscal.valor_total_nota = Decimal(total['vNF'])
         nota_fiscal.totais_tributos_aproximado = Decimal(total['vTotTrib']) if total.get('vTotTrib') else 0.0
+        return nota_fiscal
+
+
+class _SerializacaoXMLNFe400InfAdic(SerializacaoXMLNFe400Decorator):
+    """
+    Decorator que adiciona dados adicionais da Nota Fiscal.
+    """
+    @override
+    def _decorate(self,nf: OrderedDict[str,Any],nota_fiscal: NotaFiscal) -> NotaFiscal:
+        nf_inf_adic = nf['nfeProc']['NFe']['infNFe'].get('infAdic')
+        if nf_inf_adic:
+            nf_inf_resptec = nf_inf_adic.get('infRespTec')
+            if nf_inf_resptec:
+                nota_fiscal.adicionar_responsavel_tecnico(
+                    cnpj = nf_inf_resptec['CNPJ'],
+                    contato = nf_inf_resptec.get('xContato'),
+                    email = nf_inf_resptec.get('email'),
+                    fone = nf_inf_resptec.get('fone'),
+                    csrt = nf_inf_resptec.get('idCSRT')
+                )
+        for obsCont in nf_inf_adic.get('obsCont'):
+            nota_fiscal.adicionar_observacao_contribuinte(
+                nome_campo = obsCont['@xCampo'],
+                observacao = obsCont['xTexto']
+            )
+
+        return nota_fiscal
+
+class _SerializacaoXMLNFe400Cobr(SerializacaoXMLNFe400Decorator):
+    """
+    Decorator que adiciona de fatura e cobrança.
+    """
+    @override
+    def _decorate(self,nf: OrderedDict[str,Any],nota_fiscal: NotaFiscal) -> NotaFiscal:
+        nf_cobr = nf['nfeProc']['NFe']['infNFe']['cobr']
+        nf_fat = nf_cobr['fat']
+        nota_fiscal.fatura_numero = nf_fat['nFat']
+        nota_fiscal.fatura_valor_original = Decimal(nf_fat['vOrig'])
+        nota_fiscal.fatura_valor_desconto = Decimal(nf_fat['vDesc'])
+        nota_fiscal.fatura_valor_liquido = Decimal(nf_fat['vLiq'])
         return nota_fiscal

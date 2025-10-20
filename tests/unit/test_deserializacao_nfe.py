@@ -13,18 +13,27 @@ class TestNFe:
                                 total_itens,
                                 vBC,
                                 vICMS,
+                                vICMSDeson,
+                                vFCPUFDest,
+                                vICMSUFDest,
+                                vICMSUFRemet,
+                                vFCP,
                                 vBCST,
                                 vST,
+                                vFCPST,
+                                vFCPSTRet,
                                 vProd,
                                 vFrete,
                                 vSeg,
                                 vDesc,
                                 vII,
                                 vIPI,
+                                vIPIDevol,
                                 vCOFINS,
                                 vOutro,
                                 vTotTrib,
-                                vPIS
+                                vPIS,
+                                numero_obs
                             ) -> None:
 
         serializacaoNFe = SerializacaoXMLNFe400(fonte_dados=None)
@@ -41,7 +50,14 @@ class TestNFe:
         assert len(nf.produtos_e_servicos) == int(total_itens)
         assert float(nf.totais_icms_base_calculo) == float(vBC)
         assert float(nf.totais_icms_total) == float(vICMS)
+        assert float(nf.totais_icms_desonerado) == float(vICMSDeson)
+        assert float(nf.totais_fcp_destino) == float(vFCPUFDest)
+        assert float(nf.totais_icms_inter_destino) == float(vICMSUFDest)
+        assert float(nf.totais_icms_inter_remetente) == float(vICMSUFRemet)
+        assert float(nf.totais_fcp) == float(vFCP)
         assert float(nf.totais_icms_st_base_calculo) == float(vBCST)
+        assert float(nf.totais_fcp_st) == float(vFCPST)
+        assert float(nf.totais_fcp_st_ret) == float(vFCPSTRet)
         assert float(nf.totais_icms_st_total) == float(vST)
         assert float(nf.totais_icms_total_produtos_e_servicos) == float(vProd)
         assert float(nf.totais_icms_total_frete) == float(vFrete)
@@ -49,10 +65,12 @@ class TestNFe:
         assert float(nf.totais_icms_total_desconto) == float(vDesc)
         assert float(nf.totais_icms_total_ii) == float(vII)
         assert float(nf.totais_icms_total_ipi) == float(vIPI)
+        assert float(nf.totais_icms_total_ipi_dev) == float(vIPIDevol)
         assert float(nf.totais_icms_cofins) == float(vCOFINS)
         assert float(nf.totais_icms_outras_despesas_acessorias) == float(vOutro)
         assert float(nf.totais_tributos_aproximado) == float(vTotTrib)
         assert float(nf.totais_icms_pis) == float(vPIS)
+        assert len(nf.observacoes_contribuinte) == int(numero_obs)
 
         
 
