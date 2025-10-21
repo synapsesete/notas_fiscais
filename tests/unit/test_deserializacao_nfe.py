@@ -1,6 +1,5 @@
 from pytest_csv_params.decorator import csv_params
 from pynfe.entidades import NotaFiscal
-import pytest
 from notas_fiscais.serializacao_nf import SerializacaoXMLNFe400
 from pathlib import Path
 from pytest_csv_params.decorator import csv_params

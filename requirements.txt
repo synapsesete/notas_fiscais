@@ -1,4 +1,5 @@
 langchain
+langchain-pymupdf4llm
 langchain-community
 langchain-experimental
 langchain-openai

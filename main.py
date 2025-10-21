@@ -1,6 +1,5 @@
 import logging
-
-from notas_fiscais.parsers import NFeOutputParser
+from langchain_pymupdf4llm import PyMuPDF4LLMLoader
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,16 +12,11 @@ logger = logging.getLogger(__name__)
 
 def main():
 
-    filename = "tests/unit/resources/test.xml"
+    file_path = "tests/unit/resources/NFe35250401166372001127550030002655131523445210.pdf"
+    loader = PyMuPDF4LLMLoader(file_path)
+    docs = loader.load()
 
-    with open(filename, 'r', encoding='utf-8') as file:
-         my_xml = file.read()
-
-    nf_parser = NFeOutputParser()
-
-    nf = nf_parser.parse(my_xml)
-
-    print(nf)
+    print(docs[0])
 
 
 if __name__ == "__main__":
