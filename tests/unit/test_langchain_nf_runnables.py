@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 import pytest
+from pathlib import Path
 
 import logging
 
@@ -26,6 +27,10 @@ def test_parsing_danfe(filename: str) -> None:
     nf: Notafiscal = llm_danfe.invoke({"file_path":file_path})
 
     assert nf != None
+    assert nf.emitente != None
+    assert nf.emitente.cnpj != None
+    assert nf.emitente.nome_fantasia != None
+    assert nf.cliente != None
 
 
 
