@@ -34,4 +34,3 @@ VALIDAÇÕES:
 - Sinalize campos obrigatórios ausentes
 - Detecte possíveis erros de OCR em números
 
-

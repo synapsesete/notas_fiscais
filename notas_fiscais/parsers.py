@@ -16,8 +16,6 @@ class NotaFiscalOutputParser(BaseOutputParser):
 
         serializacaoNFe = SerializacaoXMLNFe400(fonte_dados=None)
 
-        xml_clean: str = re.sub(r"```xml|```", "",re.sub(u"[^\x01-\x7f]+",u"",text))
-
-        nf: NotaFiscal = serializacaoNFe.importar(xml_clean)
+        nf: NotaFiscal = serializacaoNFe.importar(text)
 
         return nf
