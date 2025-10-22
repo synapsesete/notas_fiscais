@@ -7,6 +7,7 @@ from pynfe.entidades.notafiscal import NotaFiscalEntregaRetirada,NotaFiscalProdu
 from datetime import datetime
 from sqlalchemy import over
 import xmltodict
+from xml.parsers.expat import ExpatError
 from abc import ABC, abstractmethod
 from decimal import Decimal
 
@@ -18,22 +19,26 @@ class SerializacaoXMLNFe400(SerializacaoXML):
     @override
     def importar(self, origem: str) -> NotaFiscal:
 
-        if self.__string_parece_ser_nome_arquivo(origem):
-            xml_content = self.__extrair_xml_arquivo(origem)
-        else:
-            xml_content = origem
+        try:
+            if self.__string_parece_ser_nome_arquivo(origem):
+                xml_content = self.__extrair_xml_arquivo(origem)
+            else:
+                xml_content = origem
 
-        nf_dict: OrderedDict[str,Any] = xmltodict.parse(xml_input=xml_content)
+            nf_dict: OrderedDict[str,Any] = xmltodict.parse(xml_input=xml_content)
 
-        nota_fiscal = _SerializacaoXMLNFe400Cobr ( _SerializacaoXMLNFe400InfAdic(_SerializacaoXMLNFe400TotalDecorator
-                                                    (_SerializacaoXMLNFe400TranspDecorator
-                                                           (_SerializacaoXMLNFe400ItensDecorator
-                                                            (_SerializacaoXMLNFe400RetiradaDecorator
-                                                             (_SerializacaoXMLNFe400DestDecorator
-                                                              (_SerializacaoXMLNFe400EmitDecorator
-                                                               (_SerializacaoXMLNFe400Ide(fonte_dados=super()._fonte_dados))))))))).importar(nf_dict)
+            nota_fiscal = _SerializacaoXMLNFe400Cobr ( _SerializacaoXMLNFe400InfAdic(_SerializacaoXMLNFe400TotalDecorator
+                                                        (_SerializacaoXMLNFe400TranspDecorator
+                                                            (_SerializacaoXMLNFe400ItensDecorator
+                                                                (_SerializacaoXMLNFe400RetiradaDecorator
+                                                                (_SerializacaoXMLNFe400DestDecorator
+                                                                (_SerializacaoXMLNFe400EmitDecorator
+                                                                (_SerializacaoXMLNFe400Ide(fonte_dados=super()._fonte_dados))))))))).importar(nf_dict)
 
-        return nota_fiscal
+            return nota_fiscal
+
+        except ExpatError:
+            pass
 
 
     def __string_parece_ser_nome_arquivo(self,origem: str) -> bool:
@@ -73,11 +78,11 @@ class _SerializacaoXMLNFe400Ide(Serializacao):
                                     tipo_impressao_danfe = int(ide['tpImp']),
                                     forma_emissao = ide['tpEmis'],
                                     finalidade_emissao = int(ide['finNFe']),
-                                    indicador_presencial = int(ide['indPres']),
+                                    indicador_presencial = int(ide['indPres']) if ide.get('indPres') else None,
                                     indicador_intermediador = int(ide['indIntermed']) if ide.get('indIntermed') else None,
-                                    cliente_final = int(ide['indFinal']),
-                                    processo_emissao = int(ide['procEmi']),
-                                    versao_processo_emissao = ide['verProc']
+                                    cliente_final = int(ide['indFinal']) if ide.get('indFinal') else None,
+                                    processo_emissao = int(ide['procEmi']) if ide.get('procEmi') else None,
+                                    versao_processo_emissao = ide.get('verProc')
                             )
 
         return nota_fiscal
@@ -131,11 +136,11 @@ class _SerializacaoXMLNFe400EmitDecorator(SerializacaoXMLNFe400Decorator):
                              endereco_cep=emit['enderEmit'].get('CEP'),
                              endereco_pais=emit['enderEmit']['cPais'],
                              endereco_telefone=emit['enderEmit'].get('fone'),
-                             inscricao_estadual=emit['IE'],
+                             inscricao_estadual=emit.get('IE'),
                              inscricao_estadual_subst_tributaria=emit.get('IEST'),
-                             inscricao_municipal=emit['IM'],
+                             inscricao_municipal=emit.get('IM'),
                              cnae_fiscal=emit.get('CNAE'),
-                             codigo_de_regime_tributario=emit['CRT']
+                             codigo_de_regime_tributario=emit.get('CRT')
 
                         )
     
@@ -155,7 +160,7 @@ class _SerializacaoXMLNFe400DestDecorator(SerializacaoXMLNFe400Decorator):
                           razao_social=dest.get('xNome'),
                           inscricao_suframa = dest.get('ISUF'),
                           email = dest.get('email'),
-                          indicador_ie = int(dest['indIEDest']),
+                          indicador_ie = int(dest['indIEDest']) if dest.get('indIEDest') else None,
                           endereco_logradouro=dest['enderDest']['xLgr'],
                           endereco_numero=dest['enderDest']['nro'],
                           endereco_complemento=dest['enderDest'].get('xCpl'),
@@ -183,10 +188,10 @@ class _SerializacaoXMLNFe400RetiradaDecorator(SerializacaoXMLNFe400Decorator):
         retirada : OrderedDict[str,Any] = nf['nfeProc']['NFe']['infNFe'].get('retirada')
         if retirada:
             return  NotaFiscalEntregaRetirada(
-                            numero_documento = retirada['CNPJ'],
+                            numero_documento = retirada.get('CNPJ') or retirada.get('CPF'),
                             endereco_logradouro=retirada['xLgr'],
                             endereco_numero=retirada['nro'],
-                            endereco_complemento=retirada['xCpl'],
+                            endereco_complemento=retirada.get('xCpl'),
                             endereco_bairro=retirada['xBairro'],
                             endereco_cod_municipio=retirada['cMun'],
                             endereco_municipio=retirada['xMun'],
@@ -209,33 +214,33 @@ class _SerializacaoXMLNFe400ItensDecorator(SerializacaoXMLNFe400Decorator):
                                             ean = nf_item['prod'].get('cEAN','SEM GTIN'),
                                             descricao = nf_item['prod']['xProd'],
                                             cfop = nf_item['prod'].get('CFOP'),
-                                            unidade_comercial = nf_item['prod']['uCom'],
+                                            unidade_comercial = nf_item['prod'].get('uCom'),
                                             quantidade_comercial = Decimal(nf_item['prod']['qCom']),
                                             valor_unitario_comercial = Decimal(nf_item['prod']['vUnCom']),
                                             valor_total_bruto = Decimal(nf_item['prod']['vProd']),
                                             ean_tributavel = nf_item['prod'].get('cEANTrib','SEM GTIN'),
-                                            unidade_tributavel = nf_item['prod']['uTrib'],
-                                            quantidade_tributavel = Decimal(nf_item['prod']['qTrib']),
-                                            valor_unitario_tributavel = nf_item['prod']['uTrib'],
-                                            icms_modalidade = nf_item['imposto']['ICMS']['ICMS00']['CST'],
-                                            icms_origem = int(nf_item['imposto']['ICMS']['ICMS00']['orig']),
-                                            icms_modalidade_determinacao_bc = int(nf_item['imposto']['ICMS']['ICMS00']['modBC']),
-                                            icms_valor_base_calculo=Decimal(nf_item['imposto']['ICMS']['ICMS00']['vBC']),
-                                            icms_aliquota=Decimal(nf_item['imposto']['ICMS']['ICMS00']['pICMS']),
-                                            icms_valor=Decimal(nf_item['imposto']['ICMS']['ICMS00']['vICMS']),
-                                            pis_situacao_tributaria=nf_item['imposto']['PIS']['PISAliq']['CST'],
-                                            pis_valor_base_calculo=Decimal(nf_item['imposto']['PIS']['PISAliq']['vBC']),
-                                            pis_aliquota_percentual=Decimal(nf_item['imposto']['PIS']['PISAliq']['pPIS']),
-                                            pis_valor=Decimal(nf_item['imposto']['PIS']['PISAliq']['vPIS']),
-                                            cofins_situacao_tributaria=nf_item['imposto']['COFINS']['COFINSAliq']['CST'],
-                                            cofins_valor_base_calculo=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['vBC']),
-                                            cofins_aliquota_percentual=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['pCOFINS']),
-                                            cofins_valor=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['vCOFINS']),
+                                            unidade_tributavel = nf_item['prod'].get('uTrib'),
+                                            quantidade_tributavel = Decimal(nf_item['prod']['qTrib']) if nf_item['prod'].get('qTrib') else None,
+                                            valor_unitario_tributavel = nf_item['prod'].get('uTrib'),
+                                            icms_modalidade = nf_item['imposto']['ICMS']['ICMS00']['CST'] if nf_item['imposto'].get('ICMS') else None,
+                                            icms_origem = int(nf_item['imposto']['ICMS']['ICMS00']['orig']) if nf_item['imposto'].get('ICMS') else None,
+                                            icms_modalidade_determinacao_bc = int(nf_item['imposto']['ICMS']['ICMS00']['modBC']) if nf_item['imposto'].get('ICMS') else None,
+                                            icms_valor_base_calculo=Decimal(nf_item['imposto']['ICMS']['ICMS00']['vBC'] if nf_item['imposto'].get('ICMS') else 0.0),
+                                            icms_aliquota=Decimal(nf_item['imposto']['ICMS']['ICMS00']['pICMS'] if nf_item['imposto'].get('ICMS') else 0.0),
+                                            icms_valor=Decimal(nf_item['imposto']['ICMS']['ICMS00']['vICMS'] if nf_item['imposto'].get('ICMS') else 0.0),
+                                            fcp_valor=Decimal(nf_item['imposto']['ICMS']['ICMS00']['vFCP'] if nf_item['imposto'].get('ICMS') and nf_item['imposto']['ICMS']['ICMS00'].get('vFCP') else 0.0),
+                                            pis_situacao_tributaria=nf_item['imposto']['PIS']['PISAliq']['CST'] if nf_item['imposto'].get('PIS') else None,
+                                            pis_valor_base_calculo=Decimal(nf_item['imposto']['PIS']['PISAliq']['vBC'] if nf_item['imposto'].get('PIS') else 0.0),
+                                            pis_aliquota_percentual=Decimal(nf_item['imposto']['PIS']['PISAliq']['pPIS'] if nf_item['imposto'].get('PIS') else 0.0),
+                                            pis_valor=Decimal(nf_item['imposto']['PIS']['PISAliq']['vPIS'] if nf_item['imposto'].get('PIS') else 0.0),
+                                            cofins_situacao_tributaria=nf_item['imposto']['COFINS']['COFINSAliq']['CST'] if nf_item['imposto'].get('COFINS') else None,
+                                            cofins_valor_base_calculo=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['vBC'] if nf_item['imposto'].get('COFINS') else 0.0),
+                                            cofins_aliquota_percentual=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['pCOFINS'] if nf_item['imposto'].get('COFINS') else 0.0),
+                                            cofins_valor=Decimal(nf_item['imposto']['COFINS']['COFINSAliq']['vCOFINS'] if nf_item['imposto'].get('COFINS') else 0.0),
                                             desconto = Decimal(nf_item['prod']['vDesc']),
-                                            fcp_destino_valor = Decimal(nf_item['imposto']['ICMSUFDest']['vFCPUFDest']),
-                                            icms_inter_destino_valor=Decimal(nf_item['imposto']['ICMSUFDest']['vICMSUFDest']),
-                                            totais_icms_inter_remetente=Decimal(nf_item['imposto']['ICMSUFDest']['vICMSUFRemet']),
-                                            fcp_valor=Decimal(nf_item['imposto']['ICMS']['ICMS00']['vFCP'] if nf_item['imposto']['ICMS']['ICMS00'].get('vFCP') else 0.0),
+                                            fcp_destino_valor = Decimal(nf_item['imposto']['ICMSUFDest']['vFCPUFDest'] if nf_item['imposto'].get('ICMSUFDest') else 0.0),
+                                            icms_inter_destino_valor=Decimal(nf_item['imposto']['ICMSUFDest']['vICMSUFDest'] if nf_item['imposto'].get('ICMSUFDest') else 0.0),
+                                            totais_icms_inter_remetente=Decimal(nf_item['imposto']['ICMSUFDest']['vICMSUFRemet'] if nf_item['imposto'].get('ICMSUFDest') else 0.0),
 
         )
         
@@ -253,12 +258,12 @@ class _SerializacaoXMLNFe400TranspDecorator(SerializacaoXMLNFe400Decorator):
             nf_tranportadora = nf_transp['transporta']
             nota_fiscal.transporte_modalidade_frete = int(nf_transp['modFrete'])
             nota_fiscal.transporte_transportadora = Transportadora(
-                                                            numero_documento = nf_tranportadora['CNPJ'],
+                                                            numero_documento = nf_tranportadora.get('CNPJ') or nf_tranportadora.get('CPF'),
                                                             razao_social = nf_tranportadora['xNome'],
                                                             inscricao_estadual = nf_tranportadora.get('IE'),
-                                                            endereco_logradouro = nf_tranportadora['xEnder'],
-                                                            endereco_municipio = nf_tranportadora['xMun'],
-                                                            endereco_uf = nf_tranportadora['UF']
+                                                            endereco_logradouro = nf_tranportadora.get('xEnder'),
+                                                            endereco_municipio = nf_tranportadora.get('xMun'),
+                                                            endereco_uf = nf_tranportadora.get('UF')
                                                          )
             
             nf_veiculo = nf_transp.get('veicTransp')
@@ -324,10 +329,13 @@ class _SerializacaoXMLNFe400InfAdic(SerializacaoXMLNFe400Decorator):
                     csrt = nf_inf_resptec.get('idCSRT')
                 )
         for obsCont in nf_inf_adic.get('obsCont'):
-            nota_fiscal.adicionar_observacao_contribuinte(
-                nome_campo = obsCont['@xCampo'],
-                observacao = obsCont['xTexto']
-            )
+            try:
+                nota_fiscal.adicionar_observacao_contribuinte(
+                    nome_campo = obsCont['@xCampo'],
+                    observacao = obsCont['xTexto']
+                )
+            except TypeError:
+                pass
 
         return nota_fiscal
 
@@ -338,9 +346,13 @@ class _SerializacaoXMLNFe400Cobr(SerializacaoXMLNFe400Decorator):
     @override
     def _decorate(self,nf: OrderedDict[str,Any],nota_fiscal: NotaFiscal) -> NotaFiscal:
         nf_cobr = nf['nfeProc']['NFe']['infNFe']['cobr']
-        nf_fat = nf_cobr['fat']
-        nota_fiscal.fatura_numero = nf_fat['nFat']
-        nota_fiscal.fatura_valor_original = Decimal(nf_fat['vOrig'])
-        nota_fiscal.fatura_valor_desconto = Decimal(nf_fat['vDesc'])
-        nota_fiscal.fatura_valor_liquido = Decimal(nf_fat['vLiq'])
+        try:
+            nf_fat = nf_cobr['fat']
+            nota_fiscal.fatura_numero = nf_fat['nFat']
+            nota_fiscal.fatura_valor_original = Decimal(nf_fat['vOrig'])
+            nota_fiscal.fatura_valor_desconto = Decimal(nf_fat['vDesc'])
+            nota_fiscal.fatura_valor_liquido = Decimal(nf_fat['vLiq'])
+        except KeyError:
+            pass
+
         return nota_fiscal

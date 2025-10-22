@@ -11,7 +11,9 @@ Os dados OCR extraídos são:
 
 Corrija qualquer erros do OCR.
 
-Retorne em formato XML e somente se estiver em conformidade com o schema localizado em {schema_path} e *sem erros*!
+Retorne em formato XML em formato text/plain e somente se estiver em conformidade com o schema localizado em {schema_path} e *sem erros*!
+
+Os tipos definidos no schema são {schema_tipos_path}
 
 Exemplo de XML de NF-e:
 

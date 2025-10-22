@@ -27,7 +27,7 @@ x-init-ollama: &init-ollama
     - OLLAMA_HOST=ollama:11434
   command:
     - "-c"
-    - "sleep 3; ollama pull qwen3; ollama pull gemma3:4b-it-q4_K_M;"
+    - "sleep 3; ollama pull mistral-small3.1; ollama pull gemma3:4b-it-q4_K_M;"
 
 services:
 

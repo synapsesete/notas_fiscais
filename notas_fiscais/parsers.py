@@ -4,7 +4,7 @@ from typing import override
 from notas_fiscais.serializacao_nf import SerializacaoXMLNFe400
 from pynfe.entidades import NotaFiscal
 
-from sqlalchemy import over
+import re
 
 class NotaFiscalOutputParser(BaseOutputParser):
     """
@@ -16,6 +16,8 @@ class NotaFiscalOutputParser(BaseOutputParser):
 
         serializacaoNFe = SerializacaoXMLNFe400(fonte_dados=None)
 
-        nf: NotaFiscal = serializacaoNFe.importar(text)
+        xml_clean: str = re.sub(r"```xml|```", "",re.sub(u"[^\x01-\x7f]+",u"",text))
+
+        nf: NotaFiscal = serializacaoNFe.importar(xml_clean)
 
         return nf

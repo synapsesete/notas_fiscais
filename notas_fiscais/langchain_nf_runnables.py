@@ -18,11 +18,13 @@ class NFe_Danfe_Runnable(Runnable):
 
 
     @override
-    def invoke(self, params: dict[str,Any], config=None):
+    def invoke(self, params: dict[str,Any], config=None) -> NotaFiscal:
 
-        chain = self.__llm() #| NotaFiscalOutputParser
+        chain = self.__llm() | NotaFiscalOutputParser()
 
-        return chain.invoke(self.__prompt_customizado(params["file_path"]))
+        prompt = self.__prompt_customizado(params["file_path"])
+
+        return chain.invoke(prompt)
 
 
     def __llm(self) -> Runnable:
@@ -59,7 +61,8 @@ class NFe_Danfe_Runnable(Runnable):
         formatted_prompt = prompt.format(dados_ocr_nota_fiscal=docs[0],
                                          caminho_arquivo_nota_fiscal=file_path,
                                          schema_path=self.__relative_path("resources/leiauteNFe_v4.00.xsd"),
-                                         exemplo_xml_nfe_path=self.__relative_path("resources/exemplo_nfe_4.0.xml")
+                                         exemplo_xml_nfe_path=self.__relative_path("resources/exemplo_nfe_4.0.xml"),
+                                         schema_tipos_path=self.__relative_path("resources/tiposBasico_v4.00.xsd")
                                         )
 
         return formatted_prompt
